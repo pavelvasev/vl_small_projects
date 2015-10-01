@@ -1,0 +1,110 @@
+Scene {
+  text: "На вход идет текстовый файл с содержимым растра <br/>(без заголовков) по 1 значению на пиксель в хекс-записи через пробелы: FF FA 00 1B .. <br/> Вручную установите ширину и высоту"
+
+  center: [50,30,0]
+
+  FileParam {
+    id: file
+    text: "Файл с FF-значениями"
+    file: Qt.resolvedUrl("ris.dat"); //"out.txt"
+  }
+
+  property var pointdata: []
+
+  property var q: {
+    loadFile( file.file, function(output) {
+      var nums = output.split(/\s+/);
+      var res = [];
+      for (var i=0; i<nums.length; i++) {
+        var q = nums[i];
+        if (q.length == 0) continue;
+        var v = parseInt( q, 16 );
+        res.push( v / 255.0 );
+      }
+      console.log(res);
+      pointdata = res;
+    } );
+  }
+  
+  Param {
+    id: wi
+    text: "Пикселей в ширину"
+    values: valid_ww
+    enableSliding: false
+  }
+  property var ww: valid_ww[ wi.value ]
+  
+  property var valid_ww: {
+    var res = [];
+    for (var iw=10; iw<pointdata.length*0.7; iw++) {
+      if (pointdata.length / iw - Math.floor( pointdata.length / iw ) < 0.00001) res.push( iw );
+    }
+    return res;
+  }
+  
+  property var hh: pointdata.length / ww;
+
+  Text {
+    property var tag: "left"
+    text: "Пикселей в вышину = " + hh
+  }
+  
+  Text {
+    property var tag:"left"
+    text:"Колво загруженных значений: " + pointdata.length 
+    id:status
+  }
+  
+  Points {
+    id: pts
+    
+    radius: 0.5
+
+    positions: calc1()
+    colors: calc2()
+
+    function calc1() {
+      var acc = []; // позиция
+      var plotnost = 0.15;
+      //var ww = wi.value; 
+      var www = ww;
+      var hhh = Math.floor(hh);
+      
+      for (var j=0; j<hhh; j++) 
+      for (var i=0; i<www; i++)
+      {
+        acc.push( plotnost*i );
+        acc.push( plotnost*j );
+        acc.push( 0 );
+      }
+
+      return acc;
+    }
+    
+    
+    function calc2() {
+      if (hh - Math.floor(hh) > 0.001) return [];
+
+      var acc = []; // позиция
+      var plotnost = 0.15;
+      //var ww = wi.value; 
+      var counter = 0;
+      var hhh = Math.floor(hh);
+      var www = ww;
+
+      for (var j=0; j<hhh; j++) 
+      for (var i=0; i<www; i++,counter++)
+      {
+        var v = pointdata[counter];
+        acc.push( v );
+        //acc.push( 1-v );
+        acc.push( 0 );
+        acc.push( 0 );
+      }
+
+      return acc;
+    }
+
+  }
+  
+}

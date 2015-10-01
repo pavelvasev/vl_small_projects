@@ -1,0 +1,194 @@
+Scene {
+  text: "На вход идет двоичный файл с содержимым растра <br/>(без заголовков) по 4 байта на пиксель: RGBARGBARGBA.. <br/> Вручную установите ширину и высоту"
+
+  center: [50,30,0]
+  
+  // NOTE imagemagic can convert to rgba :convert Vallisneriaspiral.jpg a.rgba
+
+  FileParam {
+    id: file
+    text: "Файл с RGBA-значениями"
+    file: Qt.resolvedUrl("a.rgba"); //"out.txt"
+  }
+  Param {
+    text: "Пикселей в ширину"
+    id: wi
+    min: 1
+    max: 2000
+    //value: 1296
+    value: 555
+    enableSliding: false
+  }
+  Param {
+    text: "Пикселей в вышину"
+    id: he
+    min: 1
+    max: 2000
+    //value: 882
+    value: 351
+    enableSliding: false
+  }  
+  
+
+  Text {
+    property var tag:"left"
+    text:"Вижу байт в данных: " + pts.data.byteLength 
+    id:status
+  }
+  
+  Button {
+    property var tag:"left"
+    text: "Рассчитать вышину"
+    width: 150
+    onClicked: he.value = Math.floor( (pts.data.byteLength / 4) / wi.value)
+  }
+
+
+  Text {
+    property var tag:"left"
+    text: " \n"
+  }
+
+
+  Param {
+    text: "Размер точек"
+    id: ptSize
+    value: 25
+  }
+ 
+  
+  Param {
+    text: "Добавка к альфа-каналу"
+    id: alP
+    min: 0
+    max: 255
+    value: 0
+    enableSliding: false
+  }
+  
+  
+  Param {
+    text: "Добавка к Red-каналу"
+    id: redP
+    min: 0
+    max: 255
+    value: 0
+    enableSliding: false
+  }
+  Param {
+    text: "Добавка к Green-каналу"
+    id: greenP
+    min: 0
+    max: 255
+    value: 0
+    enableSliding: false
+  }
+  Param {
+    text: "Добавка к Blue-каналу"
+    id: blueP
+    min: 0
+    max: 255
+    value: 0
+    enableSliding: false
+  }  
+  Param {
+    text: "Расслоить по каналу"
+    id: rassloyka
+    min: 0
+    max: 4
+    value: 0
+    values: ["---","red","green","blue","alpha"]
+    enableSliding: false
+  }  
+  Param {
+    text: "Коэф. расслоения"
+    id: rassloykaK
+    value: 5
+  }    
+  
+
+  Points {
+    id: pts
+    
+    property var data
+    radius: 0.1+ptSize.value / 100
+
+    property var q: loadFileBinary( file.file, function done(dat) {
+      data = dat;
+      //debugger;
+    })
+    
+    positions: calc1()
+    colors: calc2()
+
+    function calc1() {
+      console.log("evalling positions..."); 
+      var bytes = new Uint8Array(data);
+      if (bytes.length  == 0) {
+        console.log("exit fast" );
+        return;
+      }
+
+      var acc = []; // позиция
+      var plotnost = 0.15;
+      
+      var ww = wi.value; 
+      var hh = he.value;
+      var counter = 0;
+      var rassl = rassloyka.value -1;
+      var kk = rassloykaK.value / 100.0;
+
+      for (var j=0; j<hh; j++) 
+      for (var i=0; i<ww; i++)
+      {
+        acc.push( plotnost*i );
+        acc.push( plotnost*j );
+        var zz = rassl >= 0 ? bytes[counter+rassl]*kk : 0;
+        acc.push( zz );
+        counter += 4;
+      }
+      console.log("done");
+      return acc;
+    }
+    
+    
+    function calc2() {
+      console.log("evalling colors..."); 
+      //console.trace();
+      //debugger;
+      var bytes = new Uint8Array(data);
+      console.log("bytes..");
+      if (bytes.length  == 0) {
+        console.log("exit fast" );
+        return;
+      }
+
+      var acc = []; // позиция
+      var cols = []; // цвет
+      var counter = 0;
+      var adds = [redP.value/255.0 ,greenP.value/255.0 ,blueP.value/255.0 ,alP.value/255.0 ]
+      
+      var ww = wi.value; 
+      var hh = he.value;
+      for (var j=0; j<hh; j++) 
+      for (var i=0; i<ww; i++)
+      {
+        var alpha = (adds[3] + bytes[counter+3]) / 255.0;
+        alpha = alpha / 255.0;
+        if (alpha > 1)
+          alpha = 1;
+        
+          
+        cols.push( Math.min( 1, adds[0] + bytes[counter]*alpha  ) );
+        cols.push( Math.min( 1, adds[1] + bytes[counter+1]*alpha ) );
+        cols.push( Math.min( 1, adds[2] + bytes[counter+2]*alpha ) );
+// cols.push(0); cols.push(0);
+        counter+=4;
+      }
+      
+      console.log("done");
+      return cols;
+    }
+
+  }
+}
